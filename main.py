@@ -1,87 +1,70 @@
-
 # Interactive Plotly dashboard for Chi-square test
 import numpy as np
-import plotly.graph_objs as go
-from plotly.subplots import make_subplots
-from scipy.stats import chi2_contingency, chi2
-import ipywidgets as widgets
+from scipy.stats import chi2_contingency
+import matplotlib.pyplot as plt
 
-row_labels = ['Male', 'Female']
-col_labels = ['Option A', 'Option B']
+# Example 2x2 contingency table
+#        Success  Failure
+# Group1   20       15
+# Group2   30       25
+table = np.array([[50, 30],
+                  [40, 60]])
 
-def update_dashboard(male_a, male_b, female_a, female_b):
-    observed_data = np.array([
-        [male_a, male_b],
-        [female_a, female_b]
-    ])
-    chi2_stat, p_value, dof, expected = chi2_contingency(observed_data)
-    alpha = 0.05
-    result_text = (
-        f"Degrees of freedom: {dof}<br>"
-        f"Chi-square statistic: {chi2_stat:.2f}<br>"
-        f"P-value: {p_value:.3f}<br>"
-    )
-    if p_value < alpha:
-        result_text += "<br>p-value < alpha: <b>Reject the null hypothesis.</b><br>There is a significant association between the two categorical variables."
-    else:
-        result_text += "<br>p-value > alpha: <b>Fail to reject the null hypothesis.</b><br>There is no significant association between the two categorical variables."
+chi2_stat, p, dof, expected = chi2_contingency(table)
 
-    # Create subplots: 2 rows, 2 columns
-    fig = make_subplots(
-        rows=2, cols=2,
-        specs=[[{"type": "table"}, {"type": "xy"}],
-               [{"type": "domain"}, {"type": "xy"}]],
-        subplot_titles=("Observed Contingency Table", "Chi-square Distribution", "", "Test Results")
-    )
+# Collect output lines for display and printing
+output_lines = []
+output_lines.append(f"Degrees of freedom: {dof}")
+output_lines.append(f"Chi-square statistic: {chi2_stat:.4f}")
+output_lines.append(f"P-value: {p:.4f}")
+alpha = 0.05  # significance level
+output_lines.append(f"Alpha (significance level): {alpha}")
 
-    # Table (upper left)
-    fig.add_trace(
-        go.Table(
-            header=dict(values=["", *col_labels], align='center'),
-            cells=dict(values=[[row_labels[0], row_labels[1]],
-                              [male_a, female_a],
-                              [male_b, female_b]], align='center')
-        ),
-        row=1, col=1
-    )
+if p > alpha:
+    output_lines.append("P-value is greater than alpha. Fail to reject the null hypothesis: the variables are independent.")
+else:
+    output_lines.append("P-value is less than or equal to alpha. Reject the null hypothesis: the variables are not independent.")
 
-    # Chi-square distribution (upper right)
-    x = np.linspace(0, max(chi2_stat + 10, 20), 500)
-    y = chi2.pdf(x, dof)
-    fig.add_trace(
-        go.Scatter(x=x, y=y, mode='lines', name=f'dof={dof}'),
-        row=1, col=2
-    )
-    fig.add_trace(
-        go.Scatter(x=[chi2_stat], y=[chi2.pdf(chi2_stat, dof)], mode='markers', marker=dict(color='red', size=10), name='Chi2 stat'),
-        row=1, col=2
-    )
+for line in output_lines:
+    print(line)
 
-    # Results (lower right)
-    fig.add_trace(
-        go.Scatter(
-            x=[0], y=[0], text=[result_text], mode='text', showlegend=False
-        ),
-        row=2, col=2
-    )
+# Matplotlib visualization
+fig, axs = plt.subplots(2, 2, figsize=(10, 8), gridspec_kw={'wspace': 0.2, 'hspace': 0.3})
+fig.suptitle('Chi-Squared Test Visualization', fontsize=16)
 
-    fig.update_layout(height=700, width=1000, showlegend=False)
-    fig.update_xaxes(title_text="Chi-square value", row=1, col=2)
-    fig.update_yaxes(title_text="Probability Density", row=1, col=2)
-    fig.show()
+# Upper left: Contingency table
+axs[0, 0].axis('off')
+table_text = [[str(cell) for cell in row] for row in table]
+row_labels = ['Group 1', 'Group 2']
+col_labels = ['Success', 'Failure']
+table_obj = axs[0, 0].table(cellText=table_text,
+                            rowLabels=row_labels,
+                            colLabels=col_labels,
+                            loc='center',
+                            cellLoc='center')
+table_obj.scale(1, 1.75)
+axs[0, 0].set_title('Contingency Table', fontsize=12)
 
-# Sliders for each cell
-male_a_slider = widgets.IntSlider(value=50, min=10, max=100, step=1, description='Male Option A')
-male_b_slider = widgets.IntSlider(value=30, min=10, max=100, step=1, description='Male Option B')
-female_a_slider = widgets.IntSlider(value=40, min=10, max=100, step=1, description='Female Option A')
-female_b_slider = widgets.IntSlider(value=60, min=10, max=100, step=1, description='Female Option B')
+# Upper right: Chi-square distribution
+from scipy.stats import chi2 as chi2_dist
+x = np.linspace(0, max(chi2_stat * 2, 10), 500)
+axs[0, 1].plot(x, chi2_dist.pdf(x, dof), label=f'Chi2 PDF (df={dof})')
+axs[0, 1].axvline(chi2_stat, color='red', linestyle='--', label=f'Statistic = {chi2_stat:.2f}')
+axs[0, 1].fill_between(x, 0, chi2_dist.pdf(x, dof), where=(x >= chi2_stat), color='red', alpha=0.2)
+axs[0, 1].set_title('Chi-Square Distribution', fontsize=12)
+axs[0, 1].set_xlabel('Value')
+axs[0, 1].set_ylabel('Density')
+axs[0, 1].legend()
 
-ui = widgets.VBox([male_a_slider, male_b_slider, female_a_slider, female_b_slider])
-out = widgets.interactive_output(update_dashboard, {
-    'male_a': male_a_slider,
-    'male_b': male_b_slider,
-    'female_a': female_a_slider,
-    'female_b': female_b_slider
-})
+# Lower left: Output from print statements
+axs[1, 0].axis('off')
+output_text = '\n'.join(output_lines)
+axs[1, 0].text(0, 1, output_text, va='top', ha='left', fontsize=11)
+axs[1, 0].set_title('Test Output', fontsize=12)
 
-display(ui, out)
+# Lower right: Empty
+axs[1, 1].axis('off')
+
+#plt.tight_layout(rect=[0.01, 0.05, 0.99, 0.93])
+plt.savefig('chi_square_test_results.png')
+plt.show()

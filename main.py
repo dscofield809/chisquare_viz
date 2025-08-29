@@ -1,24 +1,54 @@
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button, Slider
+from matplotlib.widgets import Button, Slider, RadioButtons
 from matplotlib.gridspec import GridSpec
 import numpy as np
 from scipy.stats import chi2_contingency
 from scipy.stats import chi2 as chi2_dist
 
-# Initial values for the table
-init_values = [5, 3, 
-               7, 2]  # [R1C1, R1C2, R2C1, R2C2]
+#######################################################################
 
-# # Example 2x2 contingency table
-# #        Success  Failure
-# # Group1   20       15
-# # Group2   30       25
-contingency_table = np.array([[55, 45],
-                  [40, 60]])
+def chiTest(table, alpha):
+    # Performs chi2 test and displays result
+    chi2_stat, p, dof, expected = chi2_contingency(table)
+
+    x = np.linspace(0, max(chi2_stat * 2, 10), 500)
+    chiLine, = ax_graph.plot(x, chi2_dist.pdf(x, dof), label=f'Chi2 PDF (df={dof})')
+    statLine = ax_graph.axvline(chi2_stat, color='red', linestyle='--', label=f'Statistic = {chi2_stat:.2f}')
+    ax_graph.fill_between(x, 0, chi2_dist.pdf(x, dof), where=(x >= chi2_stat), color='red', alpha=1)
+    ax_graph.set_title('Chi-Square Distribution', fontsize=12)
+    ax_graph.set_xlabel('Value')
+    ax_graph.set_ylabel('Density')
+    ax_graph.set_ylim(0,0.5)
+    ax_graph.legend()
+
+    output_lines = []
+    # output_lines.append(f"Degrees of freedom: {dof}")
+    output_lines.append(f"\nChi-square statistic: {chi2_stat:.4f}")
+    output_lines.append(f"p-value: {p:.4f}")
+    output_lines.append(f"Alpha (significance level): {alpha}\n")
+
+    if p > alpha:
+        output_lines.append("p-value is greater than alpha.\n\nFail to reject the null hypothesis:\ntreatment and recovery may be independent")
+    else:
+        output_lines.append("p-value is less than or equal to alpha.\n\nReject the null hypothesis:\nwe conclude that treatment and recovery are dependent")
+
+    output_text = '\n'.join(output_lines)
+    ax_print.text(0, 1, output_text, va='top', ha='left', fontsize=11)
+    ax_print.set_title('Result of Chi-Square Test', fontsize=12)
+
+    return
+
+#######################################################################
+
+# Setup for plots
+
+# Initial values for table
+contingency_table = np.array([[300, 200],
+                  [250, 250]])
 
 
 # Create figure with 2 columns: left for table+sliders, right for graph
-fig = plt.figure(figsize=(8, 6))
+fig = plt.figure(figsize=(12, 8))
 gs = GridSpec(6, 2, figure=fig, height_ratios=[2, 0.5, 0.5, 0.5, 0.5, 0.4])
 
 # ---- TABLE (Top Left) ----
@@ -40,6 +70,7 @@ table = ax_table.table(
     cellLoc='center'
 )
 table.scale(1, 2)
+ax_table.set_title('Contingency Table')
 
 # Store references to text cells
 cell_text_refs = [
@@ -52,58 +83,29 @@ cell_text_refs = [
 # ---- SLIDERS (Bottom Left) ----
 slider_axes = [fig.add_subplot(gs[i, 0]) for i in range(1, 5)]
 sliders = [
-    Slider(slider_axes[0], label="Value (R1C1)", valmin=0, valmax=100, valinit=contingency_table[0][0]),
-    Slider(slider_axes[1], label="Value (R1C2)", valmin=0, valmax=100, valinit=contingency_table[0][1]),
-    Slider(slider_axes[2], label="Value (R2C1)", valmin=0, valmax=100, valinit=contingency_table[1][0]),
-    Slider(slider_axes[3], label="Value (R2C2)", valmin=0, valmax=100, valinit=contingency_table[1][1])
+    Slider(slider_axes[0], label="Treat / Rec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[0][0]),
+    Slider(slider_axes[1], label="Treat / NotRec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[0][1]),
+    Slider(slider_axes[2], label="NotTreat / Rec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[1][0]),
+    Slider(slider_axes[3], label="NotTreat / NotRec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[1][1])
 ]
 
-# ---- GRAPH (Right Side) ----
-ax_graph = fig.add_subplot(gs[0, 1])  # Big plot spanning top rows on right
-# x = np.linspace(0, 10, 100)
-# Calculate initial state when window opens
-chi2_stat, p, dof, expected = chi2_contingency(contingency_table)
+# ---- GRAPH (Upper right side) ----
+ax_graph = fig.add_subplot(gs[0, 1]) 
 
-x = np.linspace(0, max(chi2_stat * 2, 10), 500)
-chiLine, = ax_graph.plot(x, chi2_dist.pdf(x, dof), label=f'Chi2 PDF (df={dof})')
-statLine = ax_graph.axvline(chi2_stat, color='red', linestyle='--', label=f'Statistic = {chi2_stat:.2f}')
-ax_graph.fill_between(x, 0, chi2_dist.pdf(x, dof), where=(x >= chi2_stat), color='red', alpha=1)
-ax_graph.set_title('Chi-Square Distribution', fontsize=12)
-ax_graph.set_xlabel('Value')
-ax_graph.set_ylabel('Density')
-ax_graph.legend()
-
-# A_init = contingency_table[0][0] + contingency_table[0][1]
-# B_init = contingency_table[1][0] + contingency_table[1][1]
-# line, = ax_graph.plot(x, A_init * x + B_init, lw=2)
-# ax_graph.set_xlabel("x")
-# ax_graph.set_ylabel("f(x) = A*x + B")
-# ax_graph.grid(True)
-
-
-
-# Lower left: Output from print statements
+# ---- Text output (Lower right side) ----
 ax_print = fig.add_subplot(gs[3, 1])
 ax_print.axis('off')
 
+# Difficulty in getting this to work with sliders
+# ax_radio = plt.axes([0.05, 0.5, 0.1, 0.15])  # [left, bottom, width, height]
+# radio = RadioButtons(ax_radio, ('0.001', '0.01', '0.05'))
 
-# Collect output lines for display and printing
-output_lines = []
-output_lines.append(f"Degrees of freedom: {dof}")
-output_lines.append(f"Chi-square statistic: {chi2_stat:.4f}")
-output_lines.append(f"P-value: {p:.4f}")
-alpha = 0.05  # significance level
-output_lines.append(f"Alpha (significance level): {alpha}\n")
+#######################################################################
 
-if p > alpha:
-    output_lines.append("P-value is greater than alpha.\n\nFail to reject the null hypothesis:\nthe variables are independent.")
-else:
-    output_lines.append("P-value is less than or equal to alpha.\n\nReject the null hypothesis:\nthe variables are not independent.")
+alpha = 0.05 # significance level
+# Run test once initially, then update dynamically with slider input
+chiTest(contingency_table, alpha)
 
-
-output_text = '\n'.join(output_lines)
-ax_print.text(0, 1, output_text, va='top', ha='left', fontsize=11)
-ax_print.set_title('Test Output', fontsize=12)
 
 # ---- UPDATE FUNCTION ----
 def update(val):
@@ -111,59 +113,25 @@ def update(val):
     for i, slider in enumerate(sliders):
         cell_text_refs[i].set_text(f"{slider.val:.2f}")
 
-    # # Compute A and B from column sums
-    # A = sliders[0].val + sliders[2].val  # sum of first column
-    # B = sliders[1].val + sliders[3].val  # sum of second column
-
-    # recalculate stats
     contingency_table_update = np.array([[sliders[0].val, sliders[1].val],
                   [sliders[2].val, sliders[3].val]])
-    chi2_stat_update, p_update, dof_update, expected_update = chi2_contingency(contingency_table_update)
 
-    # Update graph
-    # line.set_ydata(A * x + B)
-    # chiLine.set_ydata(chi2_dist.pdf(x, dof_update))
-    # statLine.remove()   # erases the line from the axes
-    # statLine_update = ax_graph.axvline(chi2_stat_update, color='red', linestyle='--', label=f'Statistic = {chi2_stat_update:.2f}')
-    
+    # clear stuff
     ax_graph.clear()
-    x_update = np.linspace(0, max(chi2_stat_update * 2, 10), 500)
-    chiLine_update, = ax_graph.plot(x, chi2_dist.pdf(x_update, dof_update), label=f'Chi2 PDF (df={dof_update})')
-    statLine_update = ax_graph.axvline(chi2_stat_update, color='red', linestyle='--', label=f'Statistic = {chi2_stat_update:.2f}')
-    ax_graph.fill_between(x_update, 0, chi2_dist.pdf(x_update, dof_update), where=(x >= chi2_stat_update), color='red', alpha=1)
-    ax_graph.set_title('Chi-Square Distribution', fontsize=12)
-    ax_graph.set_xlabel('Value')
-    ax_graph.set_ylabel('Density')
-    ax_graph.legend()
-    fig.canvas.draw_idle()
-
-    # update text
     ax_print.clear()
     ax_print.axis('off')
-    output_lines = []
-    output_lines.append(f"Degrees of freedom: {dof_update}")
-    output_lines.append(f"Chi-square statistic: {chi2_stat_update:.4f}")
-    output_lines.append(f"P-value: {p_update:.4f}")
-    alpha = 0.05  # significance level
-    output_lines.append(f"Alpha (significance level): {alpha}\n")
 
-    if p_update > alpha:
-        output_lines.append("P-value is greater than alpha.\n\nFail to reject the null hypothesis:\nthe variables are independent.")
-    else:
-        output_lines.append("P-value is less than or equal to alpha.\n\nReject the null hypothesis:\nthe variables are not independent.")
+    chiTest(contingency_table_update, alpha)
 
-
-    output_text = '\n'.join(output_lines)
-    ax_print.text(0, 1, output_text, va='top', ha='left', fontsize=11)
-    ax_print.set_title('Test Output', fontsize=12)
+    fig.canvas.draw_idle()
 
 # Connect sliders to update
 for slider in sliders:
     slider.on_changed(update)
 
 # ---- RESET BUTTON ----
-# resetax = fig.add_subplot(gs[5, 0])
-# resetax.axis('off')
+resetax = fig.add_subplot(gs[5, 0])
+resetax.axis('off')
 button_ax = fig.add_axes([0.05, 0.1, 0.2, 0.05])
 button = Button(button_ax, 'Reset', hovercolor='0.975')
 

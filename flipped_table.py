@@ -23,14 +23,191 @@ from scipy.stats import chi2 as chi2_dist
 # Proportion of population not treated: (recovered: 0.30, not: 0.40)
 
 # A. Imaginary random sample balanced for treatment:
-# Include all treated and 30/70 of untreated (each 0.30 of total)
-# Proportion of sample treated and recovered: 0.25 (not rec: 0.25)
-# Suppose: Proportion of sample not treated and recovered: ?? (not rec: ??)
+# Include all treated and 30/70 of untreated (0.60 of total)
+# Proportion of sample treated and recovered: 15/60 (not rec: 15/60)
+# Proportion of sample not treated and recovered: SUPPOSE 14/60 (not rec: 16/60)
 
 # B. Imaginary random sample balanced for recovery:
-# Include all recovered and 45/55 of unrecovered (each 0.45 of total)
-# Proportion of sample treated and recovered: 15/90 (not rec: ??)
-# Suppose: Proportion of sample not treated and recovered: 30/90 (not rec: ??)
+# Include all recovered and 45/55 of unrecovered (0.90 of total)
+# Proportion of sample treated and recovered: 15/90 (SUPPOSE not rec: 10/90)
+# Proportion of sample not treated and recovered: 30/90 (not rec: 35/90)
 
 
 #######################################################################
+
+
+def chiTest(table, alpha, sample_size, axis_to_graph, axis_to_print):
+    # Performs chi2 test and displays result
+    # Assumes that numbers in table are proportions of sample_size
+    chi2_stat, p, dof, expected = chi2_contingency(table*sample_size)
+
+    x = np.linspace(0, max(chi2_stat * 2, 10), 500)
+    chiLine, = axis_to_graph.plot(x, chi2_dist.pdf(x, dof), label=f'Chi2 PDF (df={dof})')
+    statLine = axis_to_graph.axvline(chi2_stat, color='red', linestyle='--', label=f'Statistic = {chi2_stat:.2f}')
+    axis_to_graph.fill_between(x, 0, chi2_dist.pdf(x, dof), where=(x >= chi2_stat), color='red', alpha=1)
+    axis_to_graph.set_title('Chi-Square Distribution', fontsize=12)
+    axis_to_graph.set_xlabel('Value')
+    axis_to_graph.set_ylabel('Density')
+    axis_to_graph.set_ylim(0,0.5)
+    axis_to_graph.legend()
+
+    output_lines = []
+    # output_lines.append(f"Degrees of freedom: {dof}")
+    output_lines.append(f"\nChi-square statistic: {chi2_stat:.4f}")
+    output_lines.append(f"p-value: {p:.4f}")
+    # output_lines.append(f"Alpha (significance level): {alpha}\n")
+
+    # if p > alpha:
+    #     output_lines.append("p-value is greater than alpha.\n\nFail to reject the null hypothesis:\ntreatment and recovery may be independent")
+    # else:
+    #     output_lines.append("p-value is less than or equal to alpha.\n\nReject the null hypothesis:\nwe conclude that treatment and recovery are dependent")
+
+    output_text = '\n'.join(output_lines)
+    axis_to_print.text(0, 1, output_text, va='top', ha='left', fontsize=14)
+    #axis_to_print.set_title('Result of Chi-Square Test', fontsize=12)
+
+    return
+
+#######################################################################
+
+# Setup for plots
+
+# Initial values for table - treatment balanced
+contingency_table_A = np.array([[0.25, 0.25],
+                  [0.233, 0.267]])
+
+# Initial values for table - recovery balanced
+contingency_table_B = np.array([[0.167, 0.111],
+                  [0.333, 0.389]])
+
+
+
+# Create figure with 2 columns
+fig = plt.figure(figsize=(12, 8))
+gs = GridSpec(5, 2, figure=fig, height_ratios=[1.75, 0.2, 1.5, 0.1, 1])
+
+# ---- TABLE A (Top Left) ----
+ax_table_A = fig.add_subplot(gs[0, 0])
+ax_table_A.axis('off')
+
+cell_text_A = [
+    [f"{contingency_table_A[0][0]:.3f}", f"{contingency_table_A[0][1]:.3f}"],
+    [f"{contingency_table_A[1][0]:.3f}", f"{contingency_table_A[1][1]:.3f}"]
+]
+col_labels_A = ["Recovered", "Did not recover"]
+row_labels_A = ["Treatment", "No treatment"]
+
+table_A = ax_table_A.table(
+    cellText=cell_text_A,
+    rowLabels=row_labels_A,
+    colLabels=col_labels_A,
+    loc='center',
+    cellLoc='center'
+)
+table_A.scale(0.8, 2.5)
+ax_table_A.set_title('Contingency Table (Treatment Balanced)')
+
+for key, cell in table_A.get_celld().items():
+    cell.get_text().set_fontsize(12)
+
+# Store references to text cells
+cell_text_refs_A = [
+    table_A.get_celld()[(1, 0)].get_text(),
+    table_A.get_celld()[(1, 1)].get_text(),
+    table_A.get_celld()[(2, 0)].get_text(),
+    table_A.get_celld()[(2, 1)].get_text()
+]
+
+# ---- TABLE B (Top Right) ----
+ax_table_B = fig.add_subplot(gs[0, 1])
+ax_table_B.axis('off')
+
+cell_text_B = [
+    [f"{contingency_table_B[0][0]:.3f}", f"{contingency_table_B[0][1]:.3f}"],
+    [f"{contingency_table_B[1][0]:.3f}", f"{contingency_table_B[1][1]:.3f}"]
+]
+col_labels_B = ["Recovered", "Did not recover"]
+row_labels_B = ["Treatment", "No treatment"]
+
+table_B = ax_table_B.table(
+    cellText=cell_text_B,
+    rowLabels=row_labels_B,
+    colLabels=col_labels_B,
+    loc='center right',
+    cellLoc='center',
+)
+table_B.scale(0.8, 2.5)
+ax_table_B.set_title('Contingency Table (Recovery Balanced)')
+
+for key, cell in table_B.get_celld().items():
+    cell.get_text().set_fontsize(12)
+
+# Store references to text cells
+cell_text_refs_B = [
+    table_B.get_celld()[(1, 0)].get_text(),
+    table_B.get_celld()[(1, 1)].get_text(),
+    table_B.get_celld()[(2, 0)].get_text(),
+    table_B.get_celld()[(2, 1)].get_text()
+]
+
+# # ---- SLIDER ----
+slider_axes = fig.add_subplot(gs[1, 0])
+sliders = [
+    Slider(slider_axes, label="Population size", valmin=0, valmax=10000, valstep=100, valinit=1000),
+]
+sliders[0].label.set_fontsize(12)  # Increase label font size
+sliders[0].valtext.set_fontsize(12)  # Increase value font size
+
+
+# ---- GRAPH (Mid left side) ----
+ax_graph_A = fig.add_subplot(gs[2, 0]) 
+
+# ---- GRAPH (Mid right side) ----
+ax_graph_B = fig.add_subplot(gs[2, 1]) 
+
+# ---- Text output (Lower left side) ----
+ax_print_A = fig.add_subplot(gs[4, 0])
+ax_print_A.axis('off')
+
+# ---- Text output (Lower right side) ----
+ax_print_B = fig.add_subplot(gs[4, 1])
+ax_print_B.axis('off')
+
+
+#######################################################################
+
+alpha = 0.05 # significance level
+N = 1000
+sample_size_A = 0.6*N
+sample_size_B = 0.9*N
+# Run test once initially, then update dynamically with slider input
+chiTest(contingency_table_A, alpha, sample_size_A, ax_graph_A, ax_print_A)
+chiTest(contingency_table_B, alpha, sample_size_B, ax_graph_B, ax_print_B)
+
+# ---- UPDATE FUNCTION ----
+def update(val):
+    # Update N from slider
+    N = sliders[0].val
+
+    # clear stuff
+    ax_graph_A.clear()
+    ax_graph_B.clear()
+    ax_print_A.clear()
+    ax_print_A.axis('off')
+    ax_print_B.clear()
+    ax_print_B.axis('off')
+
+    # Recalculate with new N
+    sample_size_A = 0.6*N
+    sample_size_B = 0.9*N
+    chiTest(contingency_table_A, alpha, sample_size_A, ax_graph_A, ax_print_A)
+    chiTest(contingency_table_B, alpha, sample_size_B, ax_graph_B, ax_print_B)
+
+    fig.canvas.draw_idle()
+
+# Connect sliders to update
+for slider in sliders:
+    slider.on_changed(update)
+
+fig.subplots_adjust(hspace=0.5)  # Increase vertical space between rows
+plt.show()

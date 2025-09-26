@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider, RadioButtons
 from matplotlib.gridspec import GridSpec
 import numpy as np
+import sys
 from scipy.stats import chi2_contingency
 from scipy.stats import chi2 as chi2_dist
 
@@ -14,27 +15,9 @@ from scipy.stats import chi2 as chi2_dist
 # We then do the same with a sample that is balanced with respect to B and compare the results. 
 # In both cases, we use the largest possible balanced sample.
 
-# Setup:
-# Population with two variables: treatment and recovery
-# Proportion of population treated: 0.30
-# Proportion of population recovered: 0.45
-
-# Proportion of population treated (recovered: 0.15, not: 0.15)
-# Proportion of population not treated: (recovered: 0.30, not: 0.40)
-
-# A. Imaginary random sample balanced for treatment:
-# Include all treated and 30/70 of untreated (0.60 of total)
-# Proportion of sample treated and recovered: 15/60 (not rec: 15/60)
-# Proportion of sample not treated and recovered: SUPPOSE 14/60 (not rec: 16/60)
-
-# B. Imaginary random sample balanced for recovery:
-# Include all recovered and 45/55 of unrecovered (0.90 of total)
-# Proportion of sample treated and recovered: 15/90 (SUPPOSE not rec: 10/90)
-# Proportion of sample not treated and recovered: 30/90 (not rec: 35/90)
-
+# For simplicity, let A be "treatment" and B be "recovery".
 
 #######################################################################
-
 
 def chiTest(table, alpha, sample_size, axis_to_graph, axis_to_print):
     # Performs chi2 test and displays result
@@ -53,6 +36,7 @@ def chiTest(table, alpha, sample_size, axis_to_graph, axis_to_print):
 
     output_lines = []
     # output_lines.append(f"Degrees of freedom: {dof}")
+    output_lines.append(f"Sample size: {sample_size:.2f}")
     output_lines.append(f"\nChi-square statistic: {chi2_stat:.4f}")
     output_lines.append(f"p-value: {p:.4f}")
     # output_lines.append(f"Alpha (significance level): {alpha}\n")
@@ -70,15 +54,40 @@ def chiTest(table, alpha, sample_size, axis_to_graph, axis_to_print):
 
 #######################################################################
 
-# Setup for plots
+# define parameters 
+proportion_treated_recovered = 0.15
+proportion_treated_not_recovered = 0.15
+proportion_not_treated_recovered = 0.3
+proportion_not_treated_not_recovered = 0.4
 
-# Initial values for table - treatment balanced
-contingency_table_A = np.array([[0.25, 0.25],
-                  [0.233, 0.267]])
+# proportion_treated_recovered = 4/138
+# proportion_treated_not_recovered = 78/138
+# proportion_not_treated_recovered = 11/138
+# proportion_not_treated_not_recovered = 45/138
 
-# Initial values for table - recovery balanced
-contingency_table_B = np.array([[0.167, 0.111],
-                  [0.333, 0.389]])
+proportion_treated = proportion_treated_recovered + proportion_treated_not_recovered
+proportion_not_treated = proportion_not_treated_recovered + proportion_not_treated_not_recovered
+proportion_recovered = proportion_treated_recovered + proportion_not_treated_recovered
+proportion_not_recovered = proportion_treated_not_recovered + proportion_not_treated_not_recovered
+
+pTgivenR = proportion_treated_recovered / proportion_recovered
+pTgivenNotR = proportion_treated_not_recovered / proportion_not_recovered
+pNotTgivenR = proportion_not_treated_recovered / proportion_recovered
+pNotTgivenNotR = proportion_not_treated_not_recovered / proportion_not_recovered
+
+pRgivenT = proportion_treated_recovered / proportion_treated
+pRgivenNotT = proportion_not_treated_recovered / proportion_not_treated
+pNotRgivenT = proportion_treated_not_recovered / proportion_treated
+pNotRgivenNotT = proportion_not_treated_not_recovered / proportion_not_treated
+
+
+# Random sample balanced for treatment
+contingency_table_balancedT = np.array([[0.5*pRgivenT, 0.5*pNotRgivenT], #treated/recovered, treated/not recovered
+                  [0.5*pRgivenNotT, 0.5*pNotRgivenNotT]]) #not treated/recovered, not treated/not recovered
+
+# Random sample balanced for recovery
+contingency_table_balancedR = np.array([[0.5*pTgivenR, 0.5*pTgivenNotR], #treated/recovered, treated/not recovered
+                  [0.5*pNotTgivenR, 0.5*pNotTgivenNotR]]) #not treated/recovered, not treated/not recovered
 
 
 
@@ -91,8 +100,8 @@ ax_table_A = fig.add_subplot(gs[0, 0])
 ax_table_A.axis('off')
 
 cell_text_A = [
-    [f"{contingency_table_A[0][0]:.3f}", f"{contingency_table_A[0][1]:.3f}"],
-    [f"{contingency_table_A[1][0]:.3f}", f"{contingency_table_A[1][1]:.3f}"]
+    [f"{contingency_table_balancedT[0][0]:.3f}", f"{contingency_table_balancedT[0][1]:.3f}"],
+    [f"{contingency_table_balancedT[1][0]:.3f}", f"{contingency_table_balancedT[1][1]:.3f}"]
 ]
 col_labels_A = ["Recovered", "Did not recover"]
 row_labels_A = ["Treatment", "No treatment"]
@@ -123,8 +132,8 @@ ax_table_B = fig.add_subplot(gs[0, 1])
 ax_table_B.axis('off')
 
 cell_text_B = [
-    [f"{contingency_table_B[0][0]:.3f}", f"{contingency_table_B[0][1]:.3f}"],
-    [f"{contingency_table_B[1][0]:.3f}", f"{contingency_table_B[1][1]:.3f}"]
+    [f"{contingency_table_balancedR[0][0]:.3f}", f"{contingency_table_balancedR[0][1]:.3f}"],
+    [f"{contingency_table_balancedR[1][0]:.3f}", f"{contingency_table_balancedR[1][1]:.3f}"]
 ]
 col_labels_B = ["Recovered", "Did not recover"]
 row_labels_B = ["Treatment", "No treatment"]
@@ -178,11 +187,13 @@ ax_print_B.axis('off')
 
 alpha = 0.05 # significance level
 N = 1000
-sample_size_A = 0.6*N
-sample_size_B = 0.9*N
+proportion_balancedT = min(proportion_treated, proportion_not_treated)*2
+sample_size_balancedT = proportion_balancedT*N
+proportion_balancedR = min(proportion_recovered, proportion_not_recovered)*2
+sample_size_balancedR = proportion_balancedR*N
 # Run test once initially, then update dynamically with slider input
-chiTest(contingency_table_A, alpha, sample_size_A, ax_graph_A, ax_print_A)
-chiTest(contingency_table_B, alpha, sample_size_B, ax_graph_B, ax_print_B)
+chiTest(contingency_table_balancedT, alpha, sample_size_balancedT, ax_graph_A, ax_print_A)
+chiTest(contingency_table_balancedR, alpha, sample_size_balancedR, ax_graph_B, ax_print_B)
 
 # ---- UPDATE FUNCTION ----
 def update(val):
@@ -198,10 +209,12 @@ def update(val):
     ax_print_B.axis('off')
 
     # Recalculate with new N
-    sample_size_A = 0.6*N
-    sample_size_B = 0.9*N
-    chiTest(contingency_table_A, alpha, sample_size_A, ax_graph_A, ax_print_A)
-    chiTest(contingency_table_B, alpha, sample_size_B, ax_graph_B, ax_print_B)
+    proportion_balancedT = min(proportion_treated, proportion_not_treated)*2
+    sample_size_balancedT = proportion_balancedT*N
+    proportion_balancedR = min(proportion_recovered, proportion_not_recovered)*2
+    sample_size_balancedR = proportion_balancedR*N
+    chiTest(contingency_table_balancedT, alpha, sample_size_balancedT, ax_graph_A, ax_print_A)
+    chiTest(contingency_table_balancedR, alpha, sample_size_balancedR, ax_graph_B, ax_print_B)
 
     fig.canvas.draw_idle()
 

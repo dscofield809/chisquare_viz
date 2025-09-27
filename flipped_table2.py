@@ -19,51 +19,32 @@ from scipy.stats import chi2 as chi2_dist
 
 #######################################################################
 
-def chiTest(table, alpha, sample_size, axis_to_graph, axis_to_print):
+def chiTestNoGraph(table, alpha, sample_size, axis_to_print):
     # Performs chi2 test and displays result
     # Assumes that numbers in table are proportions of sample_size
     chi2_stat, p, dof, expected = chi2_contingency(table*sample_size)
 
-    x = np.linspace(0, max(chi2_stat * 2, 10), 500)
-    chiLine, = axis_to_graph.plot(x, chi2_dist.pdf(x, dof), label=f'Chi2 PDF (df={dof})')
-    statLine = axis_to_graph.axvline(chi2_stat, color='red', linestyle='--', label=f'Statistic = {chi2_stat:.2f}')
-    axis_to_graph.fill_between(x, 0, chi2_dist.pdf(x, dof), where=(x >= chi2_stat), color='red', alpha=1)
-    axis_to_graph.set_title('Chi-Square Distribution', fontsize=12)
-    axis_to_graph.set_xlabel('Value')
-    axis_to_graph.set_ylabel('Density')
-    axis_to_graph.set_ylim(0,0.5)
-    axis_to_graph.legend()
-
     output_lines = []
-    # output_lines.append(f"Degrees of freedom: {dof}")
     output_lines.append(f"Sample size: {sample_size:.2f}")
     output_lines.append(f"\nChi-square statistic: {chi2_stat:.4f}")
     output_lines.append(f"p-value: {p:.4f}")
-    # output_lines.append(f"Alpha (significance level): {alpha}\n")
-
-    # if p > alpha:
-    #     output_lines.append("p-value is greater than alpha.\n\nFail to reject the null hypothesis:\ntreatment and recovery may be independent")
-    # else:
-    #     output_lines.append("p-value is less than or equal to alpha.\n\nReject the null hypothesis:\nwe conclude that treatment and recovery are dependent")
 
     output_text = '\n'.join(output_lines)
     axis_to_print.text(0, 1, output_text, va='top', ha='left', fontsize=14)
-    #axis_to_print.set_title('Result of Chi-Square Test', fontsize=12)
 
     return
 
 #######################################################################
 
-# define parameters 
+# initial proportions for population
 proportion_treated_recovered = 0.15
 proportion_treated_not_recovered = 0.15
 proportion_not_treated_recovered = 0.30
 proportion_not_treated_not_recovered = 0.40
 
-# proportion_treated_recovered = 4/138
-# proportion_treated_not_recovered = 78/138
-# proportion_not_treated_recovered = 11/138
-# proportion_not_treated_not_recovered = 45/138
+# Initial values for table
+population_table = np.array([[proportion_treated_recovered, proportion_treated_not_recovered],
+                  [proportion_not_treated_recovered, proportion_not_treated_not_recovered]])
 
 proportion_treated = proportion_treated_recovered + proportion_treated_not_recovered
 proportion_not_treated = proportion_not_treated_recovered + proportion_not_treated_not_recovered
@@ -93,10 +74,61 @@ contingency_table_balancedR = np.array([[0.5*pTgivenR, 0.5*pTgivenNotR], #treate
 
 # Create figure with 2 columns
 fig = plt.figure(figsize=(12, 8))
-gs = GridSpec(5, 2, figure=fig, height_ratios=[1.75, 0.2, 1.5, 0.1, 1])
+gs = GridSpec(4, 2, figure=fig, height_ratios=[1.5, 0.2, 1.5, 1])
 
-# ---- TABLE A (Top Left) ----
-ax_table_A = fig.add_subplot(gs[0, 0])
+#TODO: add top left sliders for population proportions, top right contingency table display
+
+#code below is just copied from main.py, not yet modified
+
+# # ---- SLIDERS (Bottom Left) ----
+# slider_axes = [fig.add_subplot(gs[i, 0]) for i in range(1, 5)]
+# sliders = [
+#     Slider(slider_axes[0], label="Treat / Rec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[0][0]),
+#     Slider(slider_axes[1], label="Treat / NotRec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[0][1]),
+#     Slider(slider_axes[2], label="NotTreat / Rec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[1][0]),
+#     Slider(slider_axes[3], label="NotTreat / NotRec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[1][1])
+# ]
+
+# # ---- TABLE (Top Left) ----
+# ax_table = fig.add_subplot(gs[0, 0])
+# ax_table.axis('off')
+
+# cell_text = [
+#     [f"{contingency_table[0][0]:.2f}", f"{contingency_table[0][1]:.2f}"],
+#     [f"{contingency_table[1][0]:.2f}", f"{contingency_table[1][1]:.2f}"]
+# ]
+# col_labels = ["Recovered", "Did not recover"]
+# row_labels = ["Treatment", "No treatment"]
+
+# table = ax_table.table(
+#     cellText=cell_text,
+#     rowLabels=row_labels,
+#     colLabels=col_labels,
+#     loc='upper left',
+#     cellLoc='center'
+# )
+# table.scale(1, 2)
+# ax_table.set_title('Contingency Table')
+
+# # Store references to text cells
+# cell_text_refs = [
+#     table.get_celld()[(1, 0)].get_text(),
+#     table.get_celld()[(1, 1)].get_text(),
+#     table.get_celld()[(2, 0)].get_text(),
+#     table.get_celld()[(2, 1)].get_text()
+# ]
+
+
+# # ---- SLIDER (population size) ----
+slider_pop_axes = fig.add_subplot(gs[1, 0])
+slider_pop = [
+    Slider(slider_pop_axes, label="Population size", valmin=0, valmax=10000, valstep=100, valinit=1000),
+]
+slider_pop[0].label.set_fontsize(12)  # Increase label font size
+slider_pop[0].valtext.set_fontsize(12)  # Increase value font size
+
+# ---- TABLE A  ----
+ax_table_A = fig.add_subplot(gs[2, 0])
 ax_table_A.axis('off')
 
 cell_text_A = [
@@ -127,8 +159,8 @@ cell_text_refs_A = [
     table_A.get_celld()[(2, 1)].get_text()
 ]
 
-# ---- TABLE B (Top Right) ----
-ax_table_B = fig.add_subplot(gs[0, 1])
+# ---- TABLE B ----
+ax_table_B = fig.add_subplot(gs[2, 1])
 ax_table_B.axis('off')
 
 cell_text_B = [
@@ -159,28 +191,15 @@ cell_text_refs_B = [
     table_B.get_celld()[(2, 1)].get_text()
 ]
 
-# # ---- SLIDER ----
-slider_axes = fig.add_subplot(gs[1, 0])
-sliders = [
-    Slider(slider_axes, label="Population size", valmin=0, valmax=10000, valstep=100, valinit=1000),
-]
-sliders[0].label.set_fontsize(12)  # Increase label font size
-sliders[0].valtext.set_fontsize(12)  # Increase value font size
-
-
-# ---- GRAPH (Mid left side) ----
-ax_graph_A = fig.add_subplot(gs[2, 0]) 
-
-# ---- GRAPH (Mid right side) ----
-ax_graph_B = fig.add_subplot(gs[2, 1]) 
 
 # ---- Text output (Lower left side) ----
-ax_print_A = fig.add_subplot(gs[4, 0])
+ax_print_A = fig.add_subplot(gs[3, 0])
 ax_print_A.axis('off')
 
 # ---- Text output (Lower right side) ----
-ax_print_B = fig.add_subplot(gs[4, 1])
+ax_print_B = fig.add_subplot(gs[3, 1])
 ax_print_B.axis('off')
+
 
 
 #######################################################################
@@ -192,17 +211,15 @@ sample_size_balancedT = proportion_balancedT*N
 proportion_balancedR = min(proportion_recovered, proportion_not_recovered)*2
 sample_size_balancedR = proportion_balancedR*N
 # Run test once initially, then update dynamically with slider input
-chiTest(contingency_table_balancedT, alpha, sample_size_balancedT, ax_graph_A, ax_print_A)
-chiTest(contingency_table_balancedR, alpha, sample_size_balancedR, ax_graph_B, ax_print_B)
+chiTestNoGraph(contingency_table_balancedT, alpha, sample_size_balancedT, ax_print_A)
+chiTestNoGraph(contingency_table_balancedR, alpha, sample_size_balancedR, ax_print_B)
 
 # ---- UPDATE FUNCTION ----
 def update(val):
     # Update N from slider
-    N = sliders[0].val
+    N = slider_pop[0].val
 
     # clear stuff
-    ax_graph_A.clear()
-    ax_graph_B.clear()
     ax_print_A.clear()
     ax_print_A.axis('off')
     ax_print_B.clear()
@@ -213,13 +230,13 @@ def update(val):
     sample_size_balancedT = proportion_balancedT*N
     proportion_balancedR = min(proportion_recovered, proportion_not_recovered)*2
     sample_size_balancedR = proportion_balancedR*N
-    chiTest(contingency_table_balancedT, alpha, sample_size_balancedT, ax_graph_A, ax_print_A)
-    chiTest(contingency_table_balancedR, alpha, sample_size_balancedR, ax_graph_B, ax_print_B)
+    chiTestNoGraph(contingency_table_balancedT, alpha, sample_size_balancedT, ax_print_A)
+    chiTestNoGraph(contingency_table_balancedR, alpha, sample_size_balancedR, ax_print_B)
 
     fig.canvas.draw_idle()
 
 # Connect sliders to update
-for slider in sliders:
+for slider in slider_pop:
     slider.on_changed(update)
 
 fig.subplots_adjust(hspace=0.5)  # Increase vertical space between rows

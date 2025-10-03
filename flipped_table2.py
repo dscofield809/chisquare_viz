@@ -8,6 +8,9 @@ from scipy.stats import chi2 as chi2_dist
 
 #######################################################################
 
+# this version does not currently work because the sliders for proportions need to be
+# appropriately constrained so that the sum of all four proportions is 1
+
 # This modification of main.py examines a situation in which two variables A and B
 # may be related, but we're unsure of the causal direction.
 # From a population, we collect a sample that is balanced with respect to A, and 
@@ -74,61 +77,71 @@ contingency_table_balancedR = np.array([[0.5*pTgivenR, 0.5*pTgivenNotR], #treate
 
 # Create figure with 2 columns
 fig = plt.figure(figsize=(12, 8))
-gs = GridSpec(4, 2, figure=fig, height_ratios=[1.5, 0.2, 1.5, 1])
+gs = GridSpec(9, 2, figure=fig, height_ratios=[0.2, 0.2, 0.2, 0.2, 0.4, 0.2, 0.4, 2, 0.4])
 
-#TODO: add top left sliders for population proportions, top right contingency table display
 
-#code below is just copied from main.py, not yet modified
 
-# # ---- SLIDERS (Bottom Left) ----
-# slider_axes = [fig.add_subplot(gs[i, 0]) for i in range(1, 5)]
-# sliders = [
-#     Slider(slider_axes[0], label="Treat / Rec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[0][0]),
-#     Slider(slider_axes[1], label="Treat / NotRec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[0][1]),
-#     Slider(slider_axes[2], label="NotTreat / Rec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[1][0]),
-#     Slider(slider_axes[3], label="NotTreat / NotRec", valmin=0, valmax=500, valstep=1, valinit=contingency_table[1][1])
-# ]
+# ---- SLIDERS (Top Left) ----
+slider_cont_axes = [fig.add_subplot(gs[i, 0]) for i in range(4)]
+slider_cont = [
+    Slider(slider_cont_axes[0], label="Treat/Rec", valmin=0, valmax=1, valstep=0.01, valinit=0.5),
+    Slider(slider_cont_axes[1], label="Treat/NotRec", valmin=0, valmax=1, valstep=0.01, valinit=0.5),
+    Slider(slider_cont_axes[2], label="NotTreat/Rec", valmin=0, valmax=1, valstep=0.01, valinit=0.5),
+    Slider(slider_cont_axes[3], label="NotTreat/NotRec", valmin=0, valmax=1, valstep=0.01, valinit=0.5)
+]
+for i in range(4):
+    slider_cont[i].label.set_fontsize(12)  # Increase label font size
+    slider_cont[i].valtext.set_fontsize(12)  # Increase value font size  
 
-# # ---- TABLE (Top Left) ----
-# ax_table = fig.add_subplot(gs[0, 0])
-# ax_table.axis('off')
+# ---- Text output (Upper right side) ----
+ax_print_poptitle = fig.add_subplot(gs[0, 1])
+ax_print_poptitle.axis('off')
+ax_print_poptitle.text(0.1, 1, 'Population', va='top', ha='center', fontsize=14)
 
-# cell_text = [
-#     [f"{contingency_table[0][0]:.2f}", f"{contingency_table[0][1]:.2f}"],
-#     [f"{contingency_table[1][0]:.2f}", f"{contingency_table[1][1]:.2f}"]
-# ]
-# col_labels = ["Recovered", "Did not recover"]
-# row_labels = ["Treatment", "No treatment"]
+# ---- TABLE (Top Right) ----
+ax_table_pop = fig.add_subplot(gs[1:5, 1])
+ax_table_pop.axis('off')
 
-# table = ax_table.table(
-#     cellText=cell_text,
-#     rowLabels=row_labels,
-#     colLabels=col_labels,
-#     loc='upper left',
-#     cellLoc='center'
-# )
-# table.scale(1, 2)
-# ax_table.set_title('Contingency Table')
+cell_text_pop = [
+    [f"{population_table[0][0]:.3f}", f"{population_table[0][1]:.3f}"],
+    [f"{population_table[1][0]:.3f}", f"{population_table[1][1]:.3f}"]
+]
+col_labels_pop = ["Recovered", "Did not recover"]
+row_labels_pop = ["Treatment", "No treatment"]
 
-# # Store references to text cells
-# cell_text_refs = [
-#     table.get_celld()[(1, 0)].get_text(),
-#     table.get_celld()[(1, 1)].get_text(),
-#     table.get_celld()[(2, 0)].get_text(),
-#     table.get_celld()[(2, 1)].get_text()
-# ]
+table_pop = ax_table_pop.table(
+    cellText=cell_text_pop,
+    rowLabels=row_labels_pop,
+    colLabels=col_labels_pop,
+    #loc='center',
+    bbox=[.3, .3, 0.8, 0.8],
+    cellLoc='center'
+)
+#table_pop.scale(0.8, 2.5)
+#ax_table_pop.set_title('Population')
+
+for key, cell in table_pop.get_celld().items():
+    cell.get_text().set_fontsize(12)
+
+# Store references to text cells
+cell_text_refs = [
+    table_pop.get_celld()[(1, 0)].get_text(),
+    table_pop.get_celld()[(1, 1)].get_text(),
+    table_pop.get_celld()[(2, 0)].get_text(),
+    table_pop.get_celld()[(2, 1)].get_text()
+]
 
 
 # # ---- SLIDER (population size) ----
-slider_pop_axes = fig.add_subplot(gs[1, 0])
+slider_pop_axes = fig.add_subplot(gs[5, 0])
 slider_pop = [
-    Slider(slider_pop_axes, label="Population size", valmin=0, valmax=10000, valstep=100, valinit=1000),
+    Slider(slider_pop_axes, label="Population size", valmin=0, valmax=10000, valstep=100, valinit=1000, color='red'),
 ]
 slider_pop[0].label.set_fontsize(12)  # Increase label font size
 slider_pop[0].valtext.set_fontsize(12)  # Increase value font size
 
 # ---- TABLE A  ----
-ax_table_A = fig.add_subplot(gs[2, 0])
+ax_table_A = fig.add_subplot(gs[7, 0])
 ax_table_A.axis('off')
 
 cell_text_A = [
@@ -146,7 +159,7 @@ table_A = ax_table_A.table(
     cellLoc='center'
 )
 table_A.scale(0.8, 2.5)
-ax_table_A.set_title('Contingency Table (Treatment Balanced)')
+ax_table_A.set_title('Contingency Table (Treatment Balanced Sample)')
 
 for key, cell in table_A.get_celld().items():
     cell.get_text().set_fontsize(12)
@@ -160,7 +173,7 @@ cell_text_refs_A = [
 ]
 
 # ---- TABLE B ----
-ax_table_B = fig.add_subplot(gs[2, 1])
+ax_table_B = fig.add_subplot(gs[7, 1])
 ax_table_B.axis('off')
 
 cell_text_B = [
@@ -178,7 +191,7 @@ table_B = ax_table_B.table(
     cellLoc='center',
 )
 table_B.scale(0.8, 2.5)
-ax_table_B.set_title('Contingency Table (Recovery Balanced)')
+ax_table_B.set_title('Contingency Table (Recovery Balanced Sample)')
 
 for key, cell in table_B.get_celld().items():
     cell.get_text().set_fontsize(12)
@@ -193,11 +206,11 @@ cell_text_refs_B = [
 
 
 # ---- Text output (Lower left side) ----
-ax_print_A = fig.add_subplot(gs[3, 0])
+ax_print_A = fig.add_subplot(gs[8, 0])
 ax_print_A.axis('off')
 
 # ---- Text output (Lower right side) ----
-ax_print_B = fig.add_subplot(gs[3, 1])
+ax_print_B = fig.add_subplot(gs[8, 1])
 ax_print_B.axis('off')
 
 
@@ -216,8 +229,18 @@ chiTestNoGraph(contingency_table_balancedR, alpha, sample_size_balancedR, ax_pri
 
 # ---- UPDATE FUNCTION ----
 def update(val):
-    # Update N from slider
+    # Update values from slider
     N = slider_pop[0].val
+    for i, slider in enumerate(slider_cont):
+        cell_text_refs[i].set_text(f"{slider.val:.3f}")
+
+    proportion_treated_recovered = slider_cont[0].val
+    proportion_treated_not_recovered = slider_cont[1].val
+    proportion_not_treated_recovered = slider_cont[2].val
+    proportion_not_treated_not_recovered = slider_cont[3].val
+
+    # pop_table_update = np.array([[proportion_treated_recovered, proportion_treated_not_recovered],
+    #               [proportion_not_treated_recovered, proportion_not_treated_not_recovered]])
 
     # clear stuff
     ax_print_A.clear()
@@ -225,7 +248,31 @@ def update(val):
     ax_print_B.clear()
     ax_print_B.axis('off')
 
-    # Recalculate with new N
+    # Recalculate with new values
+    
+    proportion_treated = proportion_treated_recovered + proportion_treated_not_recovered
+    proportion_not_treated = proportion_not_treated_recovered + proportion_not_treated_not_recovered
+    proportion_recovered = proportion_treated_recovered + proportion_not_treated_recovered
+    proportion_not_recovered = proportion_treated_not_recovered + proportion_not_treated_not_recovered
+
+    pTgivenR = proportion_treated_recovered / proportion_recovered
+    pTgivenNotR = proportion_treated_not_recovered / proportion_not_recovered
+    pNotTgivenR = proportion_not_treated_recovered / proportion_recovered
+    pNotTgivenNotR = proportion_not_treated_not_recovered / proportion_not_recovered
+
+    pRgivenT = proportion_treated_recovered / proportion_treated
+    pRgivenNotT = proportion_not_treated_recovered / proportion_not_treated
+    pNotRgivenT = proportion_treated_not_recovered / proportion_treated
+    pNotRgivenNotT = proportion_not_treated_not_recovered / proportion_not_treated
+
+    # Random sample balanced for treatment
+    contingency_table_balancedT = np.array([[0.5*pRgivenT, 0.5*pNotRgivenT], #treated/recovered, treated/not recovered
+                    [0.5*pRgivenNotT, 0.5*pNotRgivenNotT]]) #not treated/recovered, not treated/not recovered
+
+    # Random sample balanced for recovery
+    contingency_table_balancedR = np.array([[0.5*pTgivenR, 0.5*pTgivenNotR], #treated/recovered, treated/not recovered
+                    [0.5*pNotTgivenR, 0.5*pNotTgivenNotR]]) #not treated/recovered, not treated/not recovered
+
     proportion_balancedT = min(proportion_treated, proportion_not_treated)*2
     sample_size_balancedT = proportion_balancedT*N
     proportion_balancedR = min(proportion_recovered, proportion_not_recovered)*2
@@ -237,6 +284,8 @@ def update(val):
 
 # Connect sliders to update
 for slider in slider_pop:
+    slider.on_changed(update)
+for slider in slider_cont:
     slider.on_changed(update)
 
 fig.subplots_adjust(hspace=0.5)  # Increase vertical space between rows

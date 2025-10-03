@@ -54,16 +54,32 @@ def chiTest(table, alpha, sample_size, axis_to_graph, axis_to_print):
 
 #######################################################################
 
-# define parameters 
+# define default parameters 
 proportion_treated_recovered = 0.15
 proportion_treated_not_recovered = 0.15
 proportion_not_treated_recovered = 0.30
 proportion_not_treated_not_recovered = 0.40
 
-# proportion_treated_recovered = 4/138
-# proportion_treated_not_recovered = 78/138
-# proportion_not_treated_recovered = 11/138
-# proportion_not_treated_not_recovered = 45/138
+# take parameters from user command line if provided
+if len(sys.argv) > 1:
+    try:
+        proportion_treated_recovered = float(sys.argv[1])
+        proportion_treated_not_recovered = float(sys.argv[2]) 
+        proportion_not_treated_recovered = float(sys.argv[3])
+        proportion_not_treated_not_recovered = float(sys.argv[4]) 
+        print(f"Proportion treated and recovered: {proportion_treated_recovered}")
+        print(f"Proportion treated and not recovered: {proportion_treated_not_recovered}")
+        print(f"Proportion not treated and recovered: {proportion_not_treated_recovered}")
+        print(f"Proportion not treated and not recovered: {proportion_not_treated_not_recovered}")
+    except ValueError:
+        print("Error: Arguments must be valid numbers.")
+else:
+    print("Used default values: no numerical arguments provided.")
+
+if (proportion_treated_recovered + proportion_treated_not_recovered +
+    proportion_not_treated_recovered + proportion_not_treated_not_recovered) != 1:
+    print("Warning: Proportions do not sum to 1.")
+    sys.exit(1)
 
 proportion_treated = proportion_treated_recovered + proportion_treated_not_recovered
 proportion_not_treated = proportion_not_treated_recovered + proportion_not_treated_not_recovered
